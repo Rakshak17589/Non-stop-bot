@@ -1,22 +1,27 @@
-/cmd install pk9.js module.exports = {
+module.exports = {
  config: {
-   name: "prefix"/
-   version: "1.0",
-   author: "MR.AYAN",
-   countDown: 5,
-   role: 0,
-   shortDescription: "no prefix",
-   longDescription: "no prefix",
-   category: "auto 🪐",
+	 name: "prefix",
+	 version: "1.0",
+	 author: "Tokodori_Frtiz",//remodified by cliff
+	 countDown: 5,
+	 role: 0,
+	 shortDescription: "no prefix",
+	 longDescription: "no prefix",
+	 category: "auto 🪐",
  },
 
  onStart: async function(){}, 
  onChat: async function({ event, message, getLang }) {
  if (event.body && event.body.toLowerCase() === "prefix") {
  return message.reply({
- body: `Hello bro\n\nMy prefix is [ . ]\n\n______________________________\n\n𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘?\nexample please type: .help - to view sure cmds\n.menu\n.info\n.owner\n.ping\n\n𝗕𝗢𝗧 𝗢𝗪𝗡𝗘𝗥: UK INSANE ツ\n______________________________
-`,
-  attachment: await global.utils.getStreamFromURL("https://postimg.cc/jnRmP7L5")
+ body: `
+Yo, my prefix is [ 𓆩 ✓ 𓆪 ]\n
+𝗦𝗢𝗠𝗘 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦 𝗧𝗛𝗔𝗧 𝗠𝗔𝗬 𝗛𝗘𝗟𝗣 𝗬𝗢𝗨:
+➥ ✓help [number of page] -> see commands
+➥ ✓sim [message] -> talk to bot
+➥ ✓callad [message] -> report any problem encountered
+➥ ✓help [command] -> information and usage of command\n\nHave fun using it enjoy!❤️\nBot Developer: https://www.facebook.com/rakshak.ojha.in`,
+ attachment: await global.utils.getStreamFromURL("https://i.imgur.com/M4luPbE.gif")
  });
  }
  }
