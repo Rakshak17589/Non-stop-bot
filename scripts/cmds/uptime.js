@@ -1,68 +1,153 @@
-const axios = require("axios");
+const os = require("os");
 const fs = require("fs-extra");
-const path = require("path");
+const process = require("process");
+
+const startTime = new Date();
+
+// Simplified CPU usage calculation
+function getCPUUsage() {
+  try {
+    const cpus = os.cpus();
+    const cpuCount = cpus.length;
+    const totalIdle = cpus.reduce((acc, cpu) => acc + cpu.times.idle, 0);
+    const totalTick = cpus.reduce((acc, cpu) => 
+      acc + Object.values(cpu.times).reduce((a, b) => a + b), 0);
+    
+    const avgIdle = totalIdle / cpuCount;
+    const avgTotal = totalTick / cpuCount;
+    const usagePercent = 100 - (avgIdle / avgTotal * 100);
+    
+    return usagePercent.toFixed(1);
+  } catch (error) {
+    return "N/A";
+  }
+}
+
+// Format bytes to human readable
+function formatBytes(bytes) {
+  try {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  } catch (error) {
+    return "N/A";
+  }
+}
 
 module.exports = {
   config: {
     name: "uptime",
-    aliases: ["u" ,"up" ,"upt"],
-    version: "1.0",
-    author: "OtinXSandip & Vex_kshitiz",
+    aliases: ["up", "upt", "stats", "info"],
+    author: "Priyanshi Kaur (modified)",
+    countDown: 0,
     role: 0,
-    shortDescription: { en: "Displays uptime, total users, total threads, and ping." },
-    longDescription: { en: "Displays the total number of users, threads, bot uptime, and ping, along with a random anime image." },
     category: "system",
-    guide: { en: "Use {p}uptimeMonitor to view all system stats and uptime." }
+    longDescription: {
+      en: "Get comprehensive System Information with detailed metrics!",
+    },
+    guide: {
+      en: "Use .uptime [option]\nOptions: full, cute, mini",
+    },
   },
 
-  onStart: async function ({ api, event, args, usersData, threadsData }) {
+  onStart: async function ({ api, event, args, threadsData, usersData }) {
     try {
-      // Start ping timer
-      const startTime = Date.now();
+      // Send initial message
+      const checkingMessage = await api.sendMessage(
+        "⚙️ Checking system info...", 
+        event.threadID
+      );
 
-      // Fetch all users and threads
-      const allUsers = await usersData.getAll();
-      const allThreads = await threadsData.getAll();
+      // Calculate uptime
+      const uptimeInSeconds = process.uptime();
+      const days = Math.floor(uptimeInSeconds / (3600 * 24));
+      const hours = Math.floor((uptimeInSeconds % (3600 * 24)) / 3600);
+      const minutes = Math.floor((uptimeInSeconds % 3600) / 60);
+      const seconds = Math.floor(uptimeInSeconds % 60);
+      const uptimeFormatted = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-      // Get system uptime
-      const uptime = process.uptime();
-      const days = Math.floor(uptime / 86400);
-      const hours = Math.floor((uptime % 86400) / 3600);
-      const minutes = Math.floor((uptime % 3600) / 60);
-      const seconds = Math.floor(uptime % 60);
-
-      const uptimeString = `${days} days ${hours} hours ${minutes} minutes ${seconds} seconds`;
-
-      // Get a random anime image
-      const animeNames = ["zoro", "madara", "obito", "luffy", "itachi"];
-      const randomAnime = animeNames[Math.floor(Math.random() * animeNames.length)];
-      const imageUrl = `https://pin-kshitiz.vercel.app/pin?search=${encodeURIComponent(randomAnime)}`;
-
-      const animeResponse = await axios.get(imageUrl);
-      const animeImage = animeResponse.data.result[Math.floor(Math.random() * animeResponse.data.result.length)];
-
-      const imageBuffer = await axios.get(animeImage, { responseType: 'arraybuffer' });
-      const imagePath = path.join(__dirname, 'cache', `uptimeMonitor_image.jpg`);
-      await fs.outputFile(imagePath, imageBuffer.data);
+      // Get system info
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const usedMem = totalMem - freeMem;
+      const memoryUsagePercent = ((usedMem / totalMem) * 100).toFixed(1);
+      
+      // Get users and threads count
+      const allUsers = await usersData.getAll() || [];
+      const allThreads = await threadsData.getAll() || [];
+      const userCount = allUsers.length;
+      const threadCount = allThreads.length;
 
       // Calculate ping
-      const ping = Date.now() - startTime;
+      const ping = Date.now() - checkingMessage.timestamp;
+      const pingStatus = ping < 100 ? "🟢" : ping < 300 ? "🟡" : "🔴";
 
-      // Build message
-      const message = `⏰ | Bot Uptime: ${uptimeString}\n\n👪 | Total Users: ${allUsers.length}\n🌸 | Total Threads: ${allThreads.length}\n🏓 | Ping: ${ping}ms`;
+      // Get current time
+      const currentDate = new Date().toLocaleString('en-US', { 
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
 
-      // Send message with image
-      const imageStream = fs.createReadStream(imagePath);
-      await api.sendMessage({
-        body: message,
-        attachment: imageStream
-      }, event.threadID, event.messageID);
+      let systemInfo;
 
-      // Clean up the image file
-      await fs.unlink(imagePath);
+      if (!args[0] || args[0] === "full") {
+        systemInfo = `
+╭───────── SYSTEM INFO ─────────╮
+  
+💻 System Stats
+❯ CPU: ${getCPUUsage()}% Usage
+❯ RAM: ${memoryUsagePercent}% Used
+❯ Total: ${formatBytes(totalMem)}
+❯ Used: ${formatBytes(usedMem)}
+❯ Free: ${formatBytes(freeMem)}
+
+⚙️ Bot Info
+❯ Prefix: .
+❯ Uptime: ${uptimeFormatted}
+❯ Platform: ${os.platform()}
+❯ NodeJS: ${process.version}
+
+📊 Usage Stats
+❯ Users: ${userCount}
+❯ Threads: ${threadCount}
+❯ Ping: ${ping}ms ${pingStatus}
+
+🕒 Current Time
+❯ ${currentDate}
+
+╰────────────────────────────╯`;
+      } else if (args[0] === "cute") {
+        const pets = ["🐱", "🐶", "🐰", "🐼", "🐨", "🦊"];
+        const pet = pets[Math.floor(Math.random() * pets.length)];
+        systemInfo = `
+${pet} Hewwo! Here's my stats:
+• I've been awake for ${uptimeFormatted}
+• Taking care of ${userCount} users
+• In ${threadCount} chats
+• My ping is ${ping}ms ${pingStatus}
+• Using ${memoryUsagePercent}% of my brain
+${pet} Have a paw-some day!`;
+      } else if (args[0] === "mini") {
+        systemInfo = `📊 Up: ${uptimeFormatted} | Users: ${userCount} | Threads: ${threadCount} | Ping: ${ping}ms ${pingStatus}`;
+      }
+
+      // Edit the checking message with the result
+      await api.editMessage(systemInfo, checkingMessage.messageID);
+      
     } catch (error) {
-      console.error("Error in uptimeMonitor command:", error);
-      api.sendMessage("An error occurred while retrieving the data.", event.threadID);
+      console.error("Uptime Error:", error);
+      api.sendMessage(
+        "⚠️ Error while getting system info:\n" + error.message, 
+        event.threadID
+      );
     }
   }
 };
