@@ -5,7 +5,7 @@ module.exports = {
     name: "token",
     version: "1.0",
     hasPermission: 0,
-    author: "hazayy",
+    author: "UK INSANE",
     shortDescription: {
       en: "( 𝙂𝙚𝙩 𝙏𝙤𝙠𝙚𝙣 )"
     },
